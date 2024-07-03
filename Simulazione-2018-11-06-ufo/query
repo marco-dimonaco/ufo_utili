@@ -1,0 +1,53 @@
+Query per ottenere il numero di connessioni per ogni stato:
+SELECT state1 AS state, COUNT(state2) AS connections
+FROM neighbor
+GROUP BY state1
+ORDER BY connections DESC;
+
+------------------------------------------------------------------------------------------------------------------------
+Query per trovare tutti i vicini di uno specifico stato (ad esempio, 'CA'):
+SELECT state2 AS neighbor
+FROM neighbor
+WHERE state1 = 'CA'
+UNION
+SELECT state1 AS neighbor
+FROM neighbor
+WHERE state2 = 'CA';
+
+------------------------------------------------------------------------------------------------------------------------
+Query per creare un grafo con archi che collegano stati confinanti e stati entro una certa distanza
+Query per ottenere le coordinate degli stati confinanti:
+
+SELECT s1.id AS state1, s1.Lat AS lat1, s1.Lng AS lng1,
+       s2.id AS state2, s2.Lat AS lat2, s2.Lng AS lng2
+FROM neighbor n
+JOIN state s1 ON n.state1 = s1.id
+JOIN state s2 ON n.state2 = s2.id;
+
+Query per calcolare la distanza tra due stati
+
+SELECT s1.id AS state1, s2.id AS state2,
+       (6371 * acos(
+         cos(radians(s1.Lat)) * cos(radians(s2.Lat)) *
+         cos(radians(s2.Lng) - radians(s1.Lng)) +
+         sin(radians(s1.Lat)) * sin(radians(s2.Lat))
+       )) AS distance
+FROM state s1
+JOIN state s2 ON s1.id <> s2.id
+HAVING distance < x;
+
+------------------------------------------------------------------------------------------------------------------------
+Query per collegare due stati che hanno almeno un avvistamento della stessa forma e nello stesso anno,
+dove una delle due è avvenuta dopo l'altra
+
+Estrazione delle informazioni degli avvistamenti
+SELECT id, state, shape, YEAR(datetime) AS year, datetime
+FROM sighting;
+
+Query per trovare le coppie di stati che soddisfano le condizioni
+SELECT s1.state AS state1, s2.state AS state2, s1.shape, s1.year
+FROM sighting s1
+JOIN sighting s2 ON s1.shape = s2.shape
+  AND YEAR(s1.datetime) = YEAR(s2.datetime)
+  AND s1.state <> s2.state
+  AND s1.datetime < s2.datetime;
